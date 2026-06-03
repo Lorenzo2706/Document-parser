@@ -46,6 +46,9 @@ def parse_pdf(
         lang=lang,
         notes_by_slide=None,
         with_images=with_images,
+        # Docling's PDF pipeline already merges OCR'd text into the body, so we
+        # never re-OCR the extracted images here.
+        ocr_images=False,
     )
     return ParseResult(
         source=input_path,
@@ -60,21 +63,26 @@ def parse_pptx(
     input_path: str | Path,
     *,
     out_dir: str | Path,
+    ocr: bool = False,
+    lang: str = "eng",
     with_images: bool = True,
 ) -> ParseResult:
     input_path = Path(input_path)
     out_dir = Path(out_dir)
     doc = convert_pptx(input_path)
     notes = extract_notes(input_path)
+    # Docling's PPTX pipeline does no OCR, so when OCR is requested we run
+    # Tesseract directly on each embedded slide image and inline the text.
     res: WriteResult = write_markdown(
         doc,
         out_dir=out_dir,
         stem=_resolve_stem(input_path),
         source=str(input_path),
-        ocr_enabled=False,
-        lang="n/a",
+        ocr_enabled=ocr,
+        lang=lang if ocr else "n/a",
         notes_by_slide=notes,
         with_images=with_images,
+        ocr_images=ocr,
     )
     return ParseResult(
         source=input_path,
@@ -91,17 +99,27 @@ def parse(
     out_dir: str | Path,
     ocr: bool = True,
     lang: str = "eng",
-    with_images: bool = True,
+    with_images: bool | None = None,
 ) -> ParseResult:
-    """Dispatch by extension. Raises ``ValueError`` for unsupported formats."""
+    """Dispatch by extension. Raises ``ValueError`` for unsupported formats.
+
+    ``with_images`` defaults to the inverse of ``ocr``: when OCR is on the
+    recognized text replaces the images (smaller output, better for LLMs), and
+    when OCR is off the images are embedded. Pass ``True``/``False`` explicitly
+    to override the coupling.
+    """
     input_path = Path(input_path)
     suffix = input_path.suffix.lower()
+    if with_images is None:
+        with_images = not ocr
     if suffix == ".pdf":
         return parse_pdf(
             input_path, out_dir=out_dir, ocr=ocr, lang=lang, with_images=with_images
         )
     if suffix == ".pptx":
-        return parse_pptx(input_path, out_dir=out_dir, with_images=with_images)
+        return parse_pptx(
+            input_path, out_dir=out_dir, ocr=ocr, lang=lang, with_images=with_images
+        )
     raise ValueError(
         f"Unsupported file type: {suffix!r}. Supported: .pdf, .pptx"
     )

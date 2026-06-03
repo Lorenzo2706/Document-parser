@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -24,6 +25,7 @@ from pathlib import Path
 import yaml
 from docling_core.types.doc import DoclingDocument, ImageRefMode
 
+from slide_parser import ocr
 from slide_parser.utils import ensure_dir
 
 IMAGE_PLACEHOLDER = "<!-- image -->"
@@ -76,19 +78,72 @@ def _save_pictures(
     return by_page
 
 
-def _replace_placeholders(markdown: str, links: list[str]) -> str:
+def _ocr_pictures(doc: DoclingDocument, lang: str) -> dict[int, list[str]]:
+    """OCR every picture and return ``{page: [text, ...]}``.
+
+    Emits one slot per picture (empty string when the image yields no text or
+    cannot be loaded) in the same order as ``_save_pictures`` and the
+    ``<!-- image -->`` placeholders, so substitution stays aligned.
+    """
+    by_page: dict[int, list[str]] = defaultdict(list)
+    for pic in doc.pictures:
+        page = pic.prov[0].page_no if pic.prov else 1
+        try:
+            pil = pic.get_image(doc)
+        except Exception:
+            pil = None
+        text = ocr.ocr_image(pil, lang) if pil is not None else ""
+        by_page[page].append(text)
+    return by_page
+
+
+def _replace_placeholders(markdown: str, replacements: list[str]) -> str:
+    """Replace ``IMAGE_PLACEHOLDER`` markers in order with ``replacements``.
+
+    An empty replacement string drops that placeholder (used for OCR'd images
+    with no recognized text).
+    """
     out = markdown
-    for link in links:
-        repl = f"![Image]({link})"
+    for repl in replacements:
         out = out.replace(IMAGE_PLACEHOLDER, repl, 1)
     return out
+
+
+def _placeholder_replacements(
+    page_no: int,
+    images_by_page: dict[int, list[str]],
+    ocr_text_by_page: dict[int, list[str]],
+    with_images: bool,
+    ocr_images: bool,
+) -> list[str]:
+    """Build the ordered per-placeholder replacement strings for one page."""
+    imgs = images_by_page.get(page_no, []) if with_images else []
+    texts = ocr_text_by_page.get(page_no, []) if ocr_images else []
+    count = max(len(imgs), len(texts))
+    out: list[str] = []
+    for i in range(count):
+        parts: list[str] = []
+        if ocr_images and i < len(texts) and texts[i]:
+            parts.append(texts[i])
+        if with_images and i < len(imgs):
+            parts.append(f"![Image]({imgs[i]})")
+        out.append("\n\n".join(parts))
+    return out
+
+
+def _cleanup(body: str) -> str:
+    """Drop any leftover image placeholders and collapse blank-line runs."""
+    body = body.replace(IMAGE_PLACEHOLDER, "")
+    return re.sub(r"\n{3,}", "\n\n", body).strip()
 
 
 def _assemble(
     doc: DoclingDocument,
     images_by_page: dict[int, list[str]],
+    ocr_text_by_page: dict[int, list[str]],
     notes_by_slide: dict[int, str] | None,
     with_images: bool,
+    ocr_images: bool,
 ) -> tuple[str, int]:
     pages = sorted(doc.pages.keys()) if doc.pages else [1]
     chunks: list[str] = []
@@ -96,8 +151,12 @@ def _assemble(
         body = doc.export_to_markdown(
             page_no=page_no, image_mode=ImageRefMode.PLACEHOLDER
         ).strip()
-        if with_images and images_by_page.get(page_no):
-            body = _replace_placeholders(body, images_by_page[page_no])
+        if with_images or ocr_images:
+            replacements = _placeholder_replacements(
+                page_no, images_by_page, ocr_text_by_page, with_images, ocr_images
+            )
+            body = _replace_placeholders(body, replacements)
+        body = _cleanup(body)
         chunk = f"## Slide {slide_idx}\n\n{body}".rstrip()
         if notes_by_slide and slide_idx in notes_by_slide:
             chunk += _format_notes_block(notes_by_slide[slide_idx])
@@ -115,6 +174,7 @@ def write_markdown(
     lang: str,
     notes_by_slide: dict[int, str] | None = None,
     with_images: bool = True,
+    ocr_images: bool = False,
 ) -> WriteResult:
     ensure_dir(out_dir)
     md_path = out_dir / f"{stem}.md"
@@ -125,7 +185,13 @@ def write_markdown(
     if with_images:
         images_by_page = _save_pictures(doc, assets_dir, rel_prefix)
 
-    body, n_slides = _assemble(doc, images_by_page, notes_by_slide, with_images)
+    ocr_text_by_page: dict[int, list[str]] = {}
+    if ocr_images:
+        ocr_text_by_page = _ocr_pictures(doc, lang)
+
+    body, n_slides = _assemble(
+        doc, images_by_page, ocr_text_by_page, notes_by_slide, with_images, ocr_images
+    )
 
     frontmatter = _build_frontmatter(
         {

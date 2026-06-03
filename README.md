@@ -28,13 +28,19 @@ Python 3.10+ required.
 
 ## CLI
 
+Two subcommands: `parse` (explicit file list) and `mirror` (walk a folder).
+
 ```bash
-slide-parser deck.pptx -o ./out
-slide-parser slides.pdf -o ./out --ocr --lang ita+eng
-slide-parser ./decks/*.pdf -o ./out --workers 4
+slide-parser parse deck.pptx -o ./out
+slide-parser parse slides.pdf -o ./out --ocr --lang ita+eng
+slide-parser parse ./decks/*.pdf -o ./out --workers 4
+
+# Mirror a whole tree: parse .pdf/.pptx, copy .docx/.doc/.html/.htm/.txt,
+# skip everything else. Up-to-date outputs are skipped on re-runs.
+slide-parser mirror ./source_docs ./mirrored --lang ita+eng -v
 ```
 
-Flags:
+`parse` flags:
 
 | flag | default | description |
 | --- | --- | --- |

@@ -11,7 +11,7 @@ def test_cli_pptx(tmp_path: Path, sample_pptx: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         app,
-        [str(sample_pptx), "-o", str(tmp_path), "--no-ocr"],
+        ["parse", str(sample_pptx), "-o", str(tmp_path), "--no-ocr"],
     )
     assert result.exit_code == 0, result.output
     out_md = tmp_path / "sample.md"
@@ -26,6 +26,6 @@ def test_cli_unsupported(tmp_path: Path) -> None:
     bogus.write_text("nope")
     runner = CliRunner()
     result = runner.invoke(
-        app, [str(bogus), "-o", str(tmp_path), "--no-ocr"]
+        app, ["parse", str(bogus), "-o", str(tmp_path), "--no-ocr"]
     )
     assert result.exit_code != 0
