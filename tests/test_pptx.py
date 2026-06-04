@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from slide_parser import parse
+from document_parser import parse
 
 
 def _tesseract_available() -> bool:
@@ -33,7 +33,7 @@ def test_pptx_end_to_end(tmp_path: Path, sample_pptx: Path) -> None:
 
     # Front-matter present and well-formed.
     assert md.startswith("---\n")
-    assert "generator: slide-parser" in md
+    assert "generator: document-parser" in md
     assert "n_slides: 2" in md
 
     # Each slide has its heading.
@@ -75,7 +75,7 @@ def test_pptx_ocr_inlines_text_no_images(
     tmp_path: Path, sample_pptx: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """With OCR on, each image is replaced by recognized text — no image files."""
-    import slide_parser.ocr as ocr_mod
+    import document_parser.ocr as ocr_mod
 
     monkeypatch.setattr(ocr_mod, "ocr_image", lambda img, lang="eng", **kw: "SENTINEL_OCR_TEXT")
 
@@ -99,7 +99,7 @@ def test_pptx_ocr_drops_image_when_no_text(
     tmp_path: Path, sample_pptx: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An image whose OCR yields no text leaves no residue in the Markdown."""
-    import slide_parser.ocr as ocr_mod
+    import document_parser.ocr as ocr_mod
 
     monkeypatch.setattr(ocr_mod, "ocr_image", lambda img, lang="eng", **kw: "")
 
@@ -127,7 +127,7 @@ def test_pptx_ocr_with_images_override(
     tmp_path: Path, sample_pptx: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """--ocr --images keeps both the inlined text and the embedded image."""
-    import slide_parser.ocr as ocr_mod
+    import document_parser.ocr as ocr_mod
 
     monkeypatch.setattr(ocr_mod, "ocr_image", lambda img, lang="eng", **kw: "SENTINEL_OCR_TEXT")
 

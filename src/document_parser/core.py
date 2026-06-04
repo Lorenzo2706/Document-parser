@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from slide_parser.md_writer import WriteResult, write_markdown
-from slide_parser.notes_extractor import extract_notes
-from slide_parser.pdf_backend import convert_pdf
-from slide_parser.pptx_backend import convert_pptx
-from slide_parser.utils import doc_stem
+from document_parser.md_writer import WriteResult, write_markdown
+from document_parser.notes_extractor import extract_notes
+from document_parser.pdf_backend import convert_pdf
+from document_parser.pptx_backend import convert_pptx
+from document_parser.utils import doc_stem
 
 
 @dataclass(slots=True)

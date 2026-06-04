@@ -11,15 +11,23 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _ensure_fixtures() -> None:
-    if (FIXTURES / "sample.pptx").exists() and (FIXTURES / "sample.pdf").exists():
+    pptx = FIXTURES / "sample.pptx"
+    pdf = FIXTURES / "sample.pdf"
+    xlsx = FIXTURES / "sample.xlsx"
+    if pptx.exists() and pdf.exists() and xlsx.exists():
         return
     sys.path.insert(0, str(FIXTURES))
     try:
-        from build_fixtures import build_pdf, build_pptx  # type: ignore
+        from build_fixtures import build_pdf, build_pptx, build_xlsx  # type: ignore
     finally:
         sys.path.pop(0)
-    build_pptx(FIXTURES / "sample.pptx")
-    build_pdf(FIXTURES / "sample.pdf")
+    # Build only what's missing — each builder pulls its own (optional) deps lazily.
+    if not pptx.exists():
+        build_pptx(pptx)
+    if not pdf.exists():
+        build_pdf(pdf)
+    if not xlsx.exists():
+        build_xlsx(xlsx)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -37,6 +45,11 @@ def sample_pdf() -> Path:
     return FIXTURES / "sample.pdf"
 
 
+@pytest.fixture
+def sample_xlsx() -> Path:
+    return FIXTURES / "sample.xlsx"
+
+
 def _docling_pdf_available() -> bool:
     """True iff the Docling PDF pipeline can run end-to-end.
 
@@ -47,7 +60,7 @@ def _docling_pdf_available() -> bool:
     construction is lazy.
     """
     try:
-        from slide_parser.pdf_backend import build_pdf_converter
+        from document_parser.pdf_backend import build_pdf_converter
 
         _ensure_fixtures()
         converter = build_pdf_converter(ocr=False, lang="eng", with_images=False)

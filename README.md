@@ -1,4 +1,4 @@
-# Slide-parser
+# Document-parser
 
 Convert **PDF** and **PPTX** slide decks to **LLM-ready Markdown** with zero
 data loss — fully local, no API costs.
@@ -28,16 +28,27 @@ Python 3.10+ required.
 
 ## CLI
 
-Two subcommands: `parse` (explicit file list) and `mirror` (walk a folder).
+Four subcommands: `parse` (explicit file list), `excel` (workbooks → CSV),
+`mirror` (walk a folder), and `zip` (archive a folder).
 
 ```bash
-slide-parser parse deck.pptx -o ./out
-slide-parser parse slides.pdf -o ./out --ocr --lang ita+eng
-slide-parser parse ./decks/*.pdf -o ./out --workers 4
+document-parser parse deck.pptx -o ./out
+document-parser parse slides.pdf -o ./out --ocr --lang ita+eng
+document-parser parse ./decks/*.pdf -o ./out --workers 4
 
-# Mirror a whole tree: parse .pdf/.pptx, copy .docx/.doc/.html/.htm/.txt,
-# skip everything else. Up-to-date outputs are skipped on re-runs.
-slide-parser mirror ./source_docs ./mirrored --lang ita+eng -v
+# Excel → CSV: one CSV per worksheet, grouped under ./out/<stem>/.
+document-parser excel report.xlsx -o ./out
+document-parser excel ./books/*.xlsx -o ./out --workers 4 --sep ';'
+
+# Mirror a whole tree: parse .pdf/.pptx, convert .xlsx/.xlsm/.xls to CSV,
+# copy .docx/.doc/.html/.htm/.txt, skip everything else.
+# Up-to-date outputs are skipped on re-runs.
+document-parser mirror ./source_docs ./mirrored --lang ita+eng -v
+
+# Archive a folder into <folder>.zip and delete the source, writing a
+# <archive>.log of every file added. Use --keep to retain the folder.
+document-parser zip ./mirrored
+document-parser zip ./mirrored --keep -o backup.zip
 ```
 
 `parse` flags:
@@ -51,18 +62,40 @@ slide-parser mirror ./source_docs ./mirrored --lang ita+eng -v
 | `--workers`, `-j` | `1` | Parallel workers for batch parsing. |
 | `--verbose`, `-v` | off | Verbose logging. |
 
+`excel` flags:
+
+| flag | default | description |
+| --- | --- | --- |
+| `--out`, `-o` | `./out` | Output directory (CSVs land in `<out>/<stem>/`). |
+| `--sep` | `,` | CSV field separator. |
+| `--workers`, `-j` | `1` | Parallel workers for batch conversion. |
+| `--verbose`, `-v` | off | Verbose logging. |
+
+`zip` flags:
+
+| flag | default | description |
+| --- | --- | --- |
+| `--out`, `-o` | `<folder>.zip` | Archive path. |
+| `--keep/--delete` | `--delete` | Keep or delete the source folder after a clean archive. |
+| `--verbose`, `-v` | off | Verbose logging. |
+
 ## Python API
 
 ```python
-from slide_parser import parse
+from document_parser import parse
 
 result = parse("deck.pptx", out_dir="./out")
 print(result.markdown_path, result.n_slides, result.has_notes)
 
 # Lower-level helpers if you need fine-grained control:
-from slide_parser import parse_pdf, parse_pptx
+from document_parser import parse_pdf, parse_pptx
 parse_pdf("slides.pdf", out_dir="./out", ocr=True, lang="eng")
 parse_pptx("deck.pptx", out_dir="./out")
+
+# Excel → CSV (one CSV per worksheet):
+from document_parser import convert_excel
+xls = convert_excel("report.xlsx", out_dir="./out")
+print(xls.out_subdir, xls.n_sheets, xls.csv_paths)
 ```
 
 `ParseResult` exposes `markdown_path`, `assets_dir`, `n_slides`,
@@ -79,7 +112,7 @@ n_slides: 12
 parsed_at: 2026-05-06T17:05:13+00:00
 ocr_enabled: false
 ocr_lang: n/a
-generator: slide-parser
+generator: document-parser
 ---
 
 ## Slide 1
@@ -136,9 +169,10 @@ pytest -q
 ruff check src tests
 ```
 
-`tests/conftest.py` regenerates `tests/fixtures/sample.pptx` and
-`sample.pdf` on demand. The PDF integration test is skipped automatically
-when the Docling models cannot be fetched (e.g. offline CI).
+`tests/conftest.py` regenerates `tests/fixtures/sample.pptx`,
+`sample.pdf`, and `sample.xlsx` on demand. The PDF integration test is
+skipped automatically when the Docling models cannot be fetched (e.g.
+offline CI).
 
 ## License
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from conftest import pdf_pipeline_available  # noqa: E402  (added by pytest's rootdir)
 
-from slide_parser import parse
+from document_parser import parse
 
 
 @pdf_pipeline_available

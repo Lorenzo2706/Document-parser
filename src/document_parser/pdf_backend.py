@@ -9,7 +9,7 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import DoclingDocument
 
-from slide_parser.ocr import build_ocr_options
+from document_parser.ocr import build_ocr_options
 
 
 def build_pdf_converter(*, ocr: bool, lang: str, with_images: bool) -> DocumentConverter:

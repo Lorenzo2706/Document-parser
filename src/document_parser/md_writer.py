@@ -25,8 +25,8 @@ from pathlib import Path
 import yaml
 from docling_core.types.doc import DoclingDocument, ImageRefMode
 
-from slide_parser import ocr
-from slide_parser.utils import ensure_dir
+from document_parser import ocr
+from document_parser.utils import ensure_dir
 
 IMAGE_PLACEHOLDER = "<!-- image -->"
 
@@ -200,7 +200,7 @@ def write_markdown(
             "parsed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "ocr_enabled": ocr_enabled,
             "ocr_lang": lang,
-            "generator": "slide-parser",
+            "generator": "document-parser",
         }
     )
     md_path.write_text(frontmatter + body, encoding="utf-8")

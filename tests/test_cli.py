@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from slide_parser.cli import app
+from document_parser.cli import app
 
 
 def test_cli_pptx(tmp_path: Path, sample_pptx: Path) -> None:

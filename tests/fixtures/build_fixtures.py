@@ -3,6 +3,7 @@
 Builds:
 - ``sample.pptx``: title, bullet list, table, embedded image, speaker notes.
 - ``sample.pdf``: multi-slide PDF with bullets and a table.
+- ``sample.xlsx``: two worksheets ("Metrics", "Roadmap") with a few rows each.
 
 Run via ``python tests/fixtures/build_fixtures.py`` from the repo root.
 """
@@ -15,17 +16,6 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 from pptx.util import Inches, Pt
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import landscape, letter
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import (
-    PageBreak,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
 
 HERE = Path(__file__).parent
 
@@ -86,6 +76,18 @@ def build_pptx(target: Path) -> None:
 
 
 def build_pdf(target: Path) -> None:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import landscape, letter
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
     target.parent.mkdir(parents=True, exist_ok=True)
     doc = SimpleDocTemplate(str(target), pagesize=landscape(letter))
     styles = getSampleStyleSheet()
@@ -116,7 +118,27 @@ def build_pdf(target: Path) -> None:
     doc.build(story)
 
 
+def build_xlsx(target: Path) -> None:
+    from openpyxl import Workbook
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    wb = Workbook()
+    metrics = wb.active
+    metrics.title = "Metrics"
+    metrics.append(["Metric", "Value"])
+    metrics.append(["MAU", "12,400"])
+    metrics.append(["Retention", "63%"])
+
+    roadmap = wb.create_sheet("Roadmap")
+    roadmap.append(["Quarter", "Goal"])
+    roadmap.append(["Q1", "Ship parser MVP"])
+    roadmap.append(["Q2", "Onboard design partners"])
+
+    wb.save(str(target))
+
+
 if __name__ == "__main__":
     build_pptx(HERE / "sample.pptx")
     build_pdf(HERE / "sample.pdf")
+    build_xlsx(HERE / "sample.xlsx")
     print("fixtures written to", HERE)

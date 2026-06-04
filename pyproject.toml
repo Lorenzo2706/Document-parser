@@ -3,13 +3,13 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "slide-parser"
+name = "document-parser"
 version = "0.1.0"
 description = "Convert PDF and PPTX slide decks to LLM-ready Markdown with zero data loss."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Slide-parser contributors" }]
+authors = [{ name = "Document-parser contributors" }]
 keywords = ["pdf", "pptx", "markdown", "llm", "docling", "ocr", "slides"]
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -27,6 +27,9 @@ dependencies = [
     "typer>=0.12",
     "rich>=13",
     "pyyaml>=6",
+    "pandas>=2",
+    "openpyxl>=3.1",
+    "xlrd>=2",
 ]
 
 [project.optional-dependencies]
@@ -36,13 +39,13 @@ dev = [
 ]
 
 [project.scripts]
-slide-parser = "slide_parser.cli:app"
+document-parser = "document_parser.cli:app"
 
 [project.urls]
-Repository = "https://github.com/lorenzo2706/slide-parser"
+Repository = "https://github.com/lorenzo2706/document-parser"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/slide_parser"]
+packages = ["src/document_parser"]
 
 [tool.ruff]
 line-length = 100
